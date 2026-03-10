@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -33,7 +33,7 @@
             Refresh
           </button>
 
-          <div class="user-profile">
+          <div class="user-profile" onclick="showProfileModal()">
             <div class="avatar">
               <i class="fas fa-user"></i>
             </div>
@@ -68,13 +68,6 @@
         </div>
         <div class="stat-card">
           <h3>
-            <i class="fas fa-star" style="color: #fbbf24"></i> Reward Points
-          </h3>
-          <div class="stat-value" id="pointsCount">0</div>
-          <div class="stat-change">Earn more points</div>
-        </div>
-        <div class="stat-card">
-          <h3>
             <i class="fas fa-exclamation-triangle" style="color: #f56565"></i>
             Emergency
           </h3>
@@ -100,7 +93,7 @@
           <h3>Track Status</h3>
           <p>Track complaint progress</p>
         </a>
-        <a href="#" class="action-card" onclick="showProfile()">
+        <a href="#" class="action-card" onclick="showProfileModal()">
           <i class="fas fa-user"></i>
           <h3>My Profile</h3>
           <p>View your information</p>
@@ -108,25 +101,8 @@
       </div>
 
       <!-- Recent Complaints -->
-      <div
-        style="
-          background: white;
-          border-radius: 20px;
-          padding: 25px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        "
-      >
-        <h2
-          style="
-            font-size: 20px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          "
-        >
+      <div class="recent-complaints-section">
+        <h2 class="section-title">
           <i class="fas fa-history" style="color: #667eea"></i> Recent
           Complaints
         </h2>
@@ -148,17 +124,52 @@
       </div>
     </div>
 
+    <!-- Profile Modal -->
+    <div class="profile-modal" id="profileModal">
+      <div class="profile-modal-content">
+        <div class="profile-header">
+          <h2><i class="fas fa-user-circle"></i> My Profile</h2>
+          <button class="close-profile-btn" onclick="closeProfileModal()">&times;</button>
+        </div>
+        
+        <div class="profile-body">
+          <div class="profile-avatar-large">
+            <i class="fas fa-user"></i>
+          </div>
+          
+          <div class="profile-info">
+            <div class="profile-field">
+              <label><i class="fas fa-user"></i> Full Name</label>
+              <p id="profileName">Loading...</p>
+            </div>
+            
+            <div class="profile-field">
+              <label><i class="fas fa-envelope"></i> Email Address</label>
+              <p id="profileEmail">Loading...</p>
+            </div>
+            
+            <div class="profile-field">
+              <label><i class="fas fa-phone"></i> Phone Number</label>
+              <p id="profilePhone">Loading...</p>
+            </div>
+            
+            <div class="profile-field">
+              <label><i class="fas fa-calendar"></i> Member Since</label>
+              <p id="profileJoined">Loading...</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="profile-footer">
+          <button class="profile-btn close-btn" onclick="closeProfileModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Rating Modal -->
     <div class="rate-modal" id="rateModal">
       <div class="rate-modal-content">
-        <h2
-          style="
-            font-size: 24px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 10px;
-          "
-        >
+        <h2 class="modal-title">
           <i class="fas fa-star" style="color: #fbbf24"></i> Rate Your
           Experience
         </h2>
@@ -203,6 +214,9 @@
       <div class="modal-content" id="modalContent"></div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <script>
       const token = localStorage.getItem("token");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -216,6 +230,29 @@
       let allComplaints = [];
       let selectedRatingComplaint = null;
       let selectedRating = 0;
+
+      // Toast notification function
+      function showToast(message, type = "success") {
+        const container = document.getElementById("toastContainer");
+
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+
+        const icon = document.createElement("i");
+        icon.className = `fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"}`;
+
+        const span = document.createElement("span");
+        span.textContent = message;
+
+        toast.appendChild(icon);
+        toast.appendChild(span);
+        container.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.animation = "slideOut 0.3s ease";
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
 
       // Load dashboard data
       async function loadDashboard() {
@@ -244,8 +281,6 @@
 
             if (statsResponse.ok) {
               updateStats(stats);
-              document.getElementById("pointsCount").textContent =
-                stats.rewards?.points || 0;
             }
 
             displayRecentComplaints(allComplaints.slice(0, 5));
@@ -265,8 +300,6 @@
         // Mock stats
         document.getElementById("pendingCount").textContent = "3";
         document.getElementById("resolvedCount").textContent = "7";
-        document.getElementById("pointsCount").textContent =
-          user.rewards?.points || "150";
         document.getElementById("emergencyCount").textContent = "1";
 
         // Mock complaints with completion photos
@@ -430,12 +463,37 @@
         window.location.href = `/complaints.html?id=${complaintId}`;
       }
 
+      // Profile Modal Functions
+      function showProfileModal() {
+        const userData = JSON.parse(localStorage.getItem("user") || "{}");
+        
+        document.getElementById("profileName").textContent = userData.name || "Not provided";
+        document.getElementById("profileEmail").textContent = userData.email || "Not provided";
+        document.getElementById("profilePhone").textContent = userData.phone || "Not provided";
+        
+        // Format join date
+        const joinDate = userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "N/A";
+        document.getElementById("profileJoined").textContent = joinDate;
+        
+        document.getElementById("profileModal").classList.add("active");
+      }
+
+      function closeProfileModal() {
+        document.getElementById("profileModal").classList.remove("active");
+      }
+
       // Rating Functions
       function openRatingModal(complaintId, complaintNumber) {
         selectedRatingComplaint = complaintId;
         document.getElementById("ratingComplaintInfo").innerHTML =
           `<strong>Complaint:</strong> ${complaintNumber}`;
         document.getElementById("rateModal").classList.add("active");
+
+        // Reset stars
+        selectedRating = 0;
+        document.querySelectorAll(".star-rating i").forEach((star) => {
+          star.classList.remove("active");
+        });
 
         // Setup star rating
         const stars = document.querySelectorAll(".star-rating i");
@@ -498,10 +556,7 @@
           );
 
           if (response.ok) {
-            showToast(
-              "Thank you for your feedback! You earned 2 points!",
-              "success",
-            );
+            showToast("Thank you for your feedback!", "success");
             closeRatingModal();
             loadDashboard(); // Refresh to show rating
           } else {
@@ -532,8 +587,6 @@
         document.getElementById("modalContent").innerHTML = "";
       }
 
-      // Show profile
-
       // Show loading state
       function showLoading() {
         document.getElementById("recentComplaints").innerHTML = `
@@ -542,23 +595,6 @@
                     <p>Loading your complaints...</p>
                 </div>
             `;
-      }
-
-      <!-- Replace any alert calls -->
-
-      // ... existing code ...
-
-      // Show profile function
-      function showProfile() {
-        const userData = JSON.parse(localStorage.getItem("user") || "{}");
-        // Replace alert with modal or toast
-        showToast(`👤 Profile: ${userData.name}`, "success");
-        // You could also create a modal instead of alert
-      }
-
-      // Add toast function if not present
-      function showToast(message, type = "success") {
-        // ... toast implementation as above ...
       }
 
       // Logout function
@@ -575,12 +611,16 @@
       window.onclick = function (event) {
         const rateModal = document.getElementById("rateModal");
         const mediaModal = document.getElementById("mediaModal");
+        const profileModal = document.getElementById("profileModal");
 
         if (event.target === rateModal) {
           closeRatingModal();
         }
         if (event.target === mediaModal) {
           closeMediaModal();
+        }
+        if (event.target === profileModal) {
+          closeProfileModal();
         }
       };
     </script>
